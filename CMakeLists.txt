@@ -8,6 +8,7 @@ project(Cozmonaut)
 
 set(cozmo_SRC_FILES
         src/global.c
+        src/log.c
         src/main.c
         )
 

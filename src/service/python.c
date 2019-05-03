@@ -5,7 +5,7 @@
 
 #include <stddef.h>
 
-#include "console.h"
+#include "python.h"
 #include "../service.h"
 
 //
@@ -40,8 +40,8 @@ static struct service_iface iface = {
   .proc = &proc,
 };
 
-struct service* const SERVICE_CONSOLE = &(struct service) {
-  .name = "console",
-  .description = "The console service runs the console user interface (CUI).",
+struct service* const SERVICE_PYTHON = &(struct service) {
+  .name = "python",
+  .description = "The Python service hosts the Python VM, the Cozmo SDK, and our script.",
   .iface = &iface,
 };

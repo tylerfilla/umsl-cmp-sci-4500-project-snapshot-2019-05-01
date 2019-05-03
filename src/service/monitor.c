@@ -5,7 +5,7 @@
 
 #include <stddef.h>
 
-#include "console.h"
+#include "monitor.h"
 #include "../service.h"
 
 //
@@ -40,8 +40,8 @@ static struct service_iface iface = {
   .proc = &proc,
 };
 
-struct service* const SERVICE_CONSOLE = &(struct service) {
-  .name = "console",
-  .description = "The console service runs the console user interface (CUI).",
+struct service* const SERVICE_MONITOR = &(struct service) {
+  .name = "monitor",
+  .description = "The monitor service operates the OpenGL monitor windows.",
   .iface = &iface,
 };

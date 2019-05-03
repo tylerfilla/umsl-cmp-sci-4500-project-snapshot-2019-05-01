@@ -10,6 +10,8 @@ add_subdirectory(third_party/fmt)
 
 set(cozmo_SRC_FILES
         src/service/console.c
+        src/service/monitor.c
+        src/service/python.c
         src/global.c
         src/log.c
         src/log_fmt.cpp

@@ -92,6 +92,7 @@ int service_start(struct service* svc) {
   }
 
   LOGI("Started {}", _str(svc->name));
+  LOGI("{}", _str(svc->description));
   return 0;
 }
 

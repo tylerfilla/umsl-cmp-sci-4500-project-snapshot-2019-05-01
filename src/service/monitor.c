@@ -5,6 +5,7 @@
 
 #include <stddef.h>
 
+#include <glad/glad.h>
 #include <GLFW/glfw3.h>
 
 #include "monitor.h"
@@ -43,6 +44,15 @@ static int monitor__proc_win_open(const void* a, void* b) {
     return 1;
   }
 
+  // Make window context current on this thread
+  glfwMakeContextCurrent(monitor__window);
+
+  int code;
+  if (!(code = gladLoadGL())) { // fixme
+    LOGE("Failed to load OpenGL: {}", _i(code));
+    return 1;
+  }
+
   return 0;
 }
 
@@ -65,11 +75,14 @@ static int monitor__proc_win_update(const void* a, void* b) {
     return 1;
   }
 
-  // Poll all window events
-  glfwPollEvents();
+  glClearColor(1, 1, 1, 1);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
   // Swap buffers on monitor window
   glfwSwapBuffers(monitor__window);
+
+  // Poll all window events
+  glfwPollEvents();
 
   return 0;
 }

@@ -5,30 +5,115 @@
 
 #include <stddef.h>
 
+#include <Python.h>
+
 #include "python.h"
+
 #include "../service.h"
+#include "../log.h"
 
 //
-// Service Interface
+// Service Procedures
+//
+
+static int python__proc_op_exec(const void* a, void* b) {
+  enum service_python_op op = (enum service_python_op) a;
+  return 1; // TODO
+}
+
+static int python__proc_wasd_set_fwd(const void* a, void* b) {
+  return 1; // TODO
+}
+
+static int python__proc_wasd_clr_fwd(const void* a, void* b) {
+  return 1; // TODO
+}
+
+static int python__proc_wasd_set_rev(const void* a, void* b) {
+  return 1; // TODO
+}
+
+static int python__proc_wasd_clr_rev(const void* a, void* b) {
+  return 1; // TODO
+}
+
+static int python__proc_wasd_set_left(const void* a, void* b) {
+  return 1; // TODO
+}
+
+static int python__proc_wasd_clr_left(const void* a, void* b) {
+  return 1; // TODO
+}
+
+static int python__proc_wasd_set_right(const void* a, void* b) {
+  return 1; // TODO
+}
+
+static int python__proc_wasd_clr_right(const void* a, void* b) {
+  return 1; // TODO
+}
+
+//
+// Service Callbacks
 //
 
 static int on_load() {
-  return 1; // TODO
+  // Try to initialize Python interpreter
+  Py_Initialize();
+  if (!Py_IsInitialized()) {
+    LOGE("Unable to initialize Python interpreter");
+    return 1;
+  }
+
+  return 0;
 }
 
 static int on_unload() {
-  return 1; // TODO
+  // Try to clean up Python interpreter
+  // It's not an error if this fails, but it might leak resources
+  if (Py_FinalizeEx() < 0) {
+    LOGW("Unable to clean up Python interpreter");
+  }
+
+  return 0;
 }
 
 static int on_start() {
-  return 1; // TODO
+  LOGI("The Python service has started, and library version info follows");
+  LOGI("Python {}.{}.{} ({})", _i(PY_MAJOR_VERSION), _i(PY_MINOR_VERSION), _i(PY_MICRO_VERSION), _ptr(PY_VERSION_HEX));
+  LOGI("Python build {}", _str(Py_GetBuildInfo()));
+  LOGI("PYTHON_API_STRING={}", _str(PYTHON_API_STRING));
+  LOGI("PYTHON_ABI_STRING={}", _str(PYTHON_ABI_STRING));
+
+  return 0;
 }
 
 static int on_stop() {
-  return 1; // TODO
+  return 0;
 }
 
 static int (* proc(int fn))(const void* a, void* b) {
+  switch (fn) {
+    case service_python_fn_op_exec:
+      return &python__proc_op_exec;
+    case service_python_fn_wasd_set_fwd:
+      return &python__proc_wasd_set_fwd;
+    case service_python_fn_wasd_clr_fwd:
+      return &python__proc_wasd_clr_fwd;
+    case service_python_fn_wasd_set_rev:
+      return &python__proc_wasd_set_rev;
+    case service_python_fn_wasd_clr_rev:
+      return &python__proc_wasd_clr_rev;
+    case service_python_fn_wasd_set_left:
+      return &python__proc_wasd_set_left;
+    case service_python_fn_wasd_clr_left:
+      return &python__proc_wasd_clr_left;
+    case service_python_fn_wasd_set_right:
+      return &python__proc_wasd_set_right;
+    case service_python_fn_wasd_clr_right:
+      return &python__proc_wasd_clr_right;
+  }
+
   return NULL;
 }
 

@@ -27,6 +27,26 @@ int main(int argc, char* argv[]) {
   service_start(SERVICE_PYTHON);
   service_start(SERVICE_MONITOR);
 
+  // Open the monitor window
+  service_call(SERVICE_MONITOR, service_monitor_fn_win_open, NULL, NULL);
+
+  do {
+    // Query the window status
+    int window_status;
+    service_call(SERVICE_MONITOR, service_monitor_fn_win_query, NULL, &window_status);
+
+    // If window is closing, break out
+    if (!window_status) {
+      break;
+    }
+
+    // Update the window
+    service_call(SERVICE_MONITOR, service_monitor_fn_win_update, NULL, NULL);
+  } while (1);
+
+  // Close the monitor window
+  service_call(SERVICE_MONITOR, service_monitor_fn_win_close, NULL, NULL);
+
   service_stop(SERVICE_MONITOR);
   service_stop(SERVICE_PYTHON);
   service_stop(SERVICE_CONSOLE);

@@ -7,6 +7,7 @@ cmake_minimum_required(VERSION 3.4)
 project(Cozmonaut)
 
 add_subdirectory(third_party/fmt)
+add_subdirectory(third_party/glfw)
 
 set(cozmo_SRC_FILES
         src/service/console.c
@@ -21,4 +22,4 @@ set(cozmo_SRC_FILES
 
 add_executable(cozmo ${cozmo_SRC_FILES})
 set_target_properties(cozmo PROPERTIES C_STANDARD 99 CXX_STANDARD 14)
-target_link_libraries(cozmo PRIVATE fmt::fmt-header-only)
+target_link_libraries(cozmo PRIVATE fmt::fmt-header-only glfw)

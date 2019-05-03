@@ -9,10 +9,12 @@ project(Cozmonaut)
 add_subdirectory(third_party/fmt)
 
 set(cozmo_SRC_FILES
+        src/service/console.c
         src/global.c
         src/log.c
         src/log_fmt.cpp
         src/main.c
+        src/service.c
         )
 
 add_executable(cozmo ${cozmo_SRC_FILES})

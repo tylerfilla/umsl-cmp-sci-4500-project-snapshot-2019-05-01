@@ -30,6 +30,9 @@ struct log_form {
   /** The number of message format arguments. */
   unsigned int msg_fmt_args_num;
 
+  /** The log tag. */
+  const char* tag;
+
   /** The file name. */
   const char* file;
 
@@ -102,6 +105,11 @@ void log__submit_form(struct log_form* form);
     (sizeof((const struct log_msg_fmt_arg[]) { __VA_ARGS__ }) \
       / sizeof(const struct log_msg_fmt_arg))
 
+
+#ifndef LOG_TAG
+#define LOG_TAG "any"
+#endif
+
 /**
  * Form a log record.
  *
@@ -117,6 +125,7 @@ void log__submit_form(struct log_form* form);
         LOG__FORM_MSG_ARGS((const char*) (fmt), ##__VA_ARGS__),     \
       .msg_fmt_args_num =                                           \
         LOG__FORM_MSG_ARGS_NUM((const char*) (fmt), ##__VA_ARGS__), \
+      .tag = LOG_TAG,                                               \
       .file = __FILE__,                                             \
       .line = __LINE__,                                             \
     }

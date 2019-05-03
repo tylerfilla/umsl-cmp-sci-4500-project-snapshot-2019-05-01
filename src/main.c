@@ -3,6 +3,8 @@
  * Copyright 2019 The Cozmonaut Contributors
  */
 
+#define LOG_TAG "main"
+
 #include <stddef.h>
 
 #include "service/console.h"

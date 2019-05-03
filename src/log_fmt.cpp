@@ -17,9 +17,9 @@ static constexpr auto log_level_name(log_level level) {
     case log_level_debug:
       return "DEBUG";
     case log_level_info:
-      return "INFO";
+      return "INFO ";
     case log_level_warn:
-      return "WARN";
+      return "WARN ";
     case log_level_error:
       return "ERROR";
     case log_level_fatal:
@@ -104,7 +104,7 @@ void log__temp_format_and_submit(log_form* form) {
   auto msg = fmt::vformat(form->msg_fmt, args);
 
   // Print the whole thing to standard out for now
-  fmt::print("{}: {}\n", log_level_name(form->level), msg);
+  fmt::print("{} [{}] {}\n", log_level_name(form->level), form->tag, msg);
 }
 
 } // extern "C"

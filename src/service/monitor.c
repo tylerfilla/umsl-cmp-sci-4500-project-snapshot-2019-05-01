@@ -4,6 +4,7 @@
  */
 
 #include <stddef.h>
+#include <stdlib.h>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -26,6 +27,26 @@
 static GLFWwindow* monitor__window;
 
 //
+// Window Callbacks
+//
+
+static void monitor__window_cb_cursor_pos(GLFWwindow* window, double xpos, double ypos) {
+  LOGT("monitor__window_cb_cursor_pos({}, {}, {})", _ptr(window), _d(xpos), _d(ypos));
+}
+
+static void monitor__window_cb_key(GLFWwindow* window, int key, int scancode, int action, int mods) {
+  LOGT("monitor__window_cb_key({}, {}, {}, {}, {})", _ptr(window), _i(key), _i(scancode), _i(action), _i(mods));
+}
+
+static void monitor__window_cb_mouse_button(GLFWwindow* window, int button, int action, int mods) {
+  LOGT("monitor__window_cb_mouse_button({}, {}, {}, {})", _ptr(window), _i(button), _i(action), _i(mods));
+}
+
+static void monitor__window_cb_scroll(GLFWwindow* window, double xoffset, double yoffset) {
+  LOGT("monitor__window_cb_scroll({}, {}, {})", _ptr(window), _d(xoffset), _d(yoffset));
+}
+
+//
 // Service Procedures
 //
 
@@ -34,6 +55,13 @@ static int monitor__proc_win_open(const void* a, void* b) {
     LOGE("Monitor window already open");
     return 1;
   }
+
+  // Ask for OpenGL 3.2 core profile
+  // This is the minimum version of GL that has profiles
+  glfwWindowHint(GLFW_CLIENT_API, GLFW_OPENGL_API);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+  glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+  glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
   // Try to create the monitor window
   monitor__window = glfwCreateWindow(WINDOW_INIT_WIDTH, WINDOW_INIT_HEIGHT, WINDOW_TITLE, NULL, NULL);
@@ -44,11 +72,20 @@ static int monitor__proc_win_open(const void* a, void* b) {
     return 1;
   }
 
-  // Make window context current on this thread
+  // Set up window callbacks
+  glfwSetCursorPosCallback(monitor__window, &monitor__window_cb_cursor_pos);
+  glfwSetKeyCallback(monitor__window, &monitor__window_cb_key);
+  glfwSetMouseButtonCallback(monitor__window, &monitor__window_cb_mouse_button);
+  glfwSetScrollCallback(monitor__window, &monitor__window_cb_scroll);
+
+  // Make window's OpenGL context current on this thread
   glfwMakeContextCurrent(monitor__window);
 
+  // Wait for 1 v-sync when swapping buffers
+  glfwSwapInterval(1);
+
   int code;
-  if (!(code = gladLoadGL())) { // fixme
+  if (!(code = gladLoadGL())) {
     LOGE("Failed to load OpenGL: {}", _i(code));
     return 1;
   }
@@ -75,7 +112,7 @@ static int monitor__proc_win_update(const void* a, void* b) {
     return 1;
   }
 
-  glClearColor(1, 1, 1, 1);
+  glClearColor(rand() / (float) RAND_MAX, rand() / (float) RAND_MAX, rand() / (float) RAND_MAX, 1);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
 
   // Swap buffers on monitor window

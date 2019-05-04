@@ -22,6 +22,7 @@ static const char DRIVER_CODE_OP_FRIENDS_LIST_EXEC[] =
 
 /** Driver code for stop stage of the friends list operation. */
 static const char DRIVER_CODE_OP_FRIENDS_LIST_STOP[] =
+  "op = globals()['op']\n"
   "op.stop()\n";
 
 /** Driver code for exec stage of the friends remove operation. */
@@ -32,6 +33,7 @@ static const char DRIVER_CODE_OP_FRIENDS_REMOVE_EXEC[] =
 
 /** Driver code for stop stage of the friends remove operation. */
 static const char DRIVER_CODE_OP_FRIENDS_REMOVE_STOP[] =
+  "op = globals()['op']\n"
   "op.stop()\n";
 
 /** Driver code for exec stage of the interact operation. */

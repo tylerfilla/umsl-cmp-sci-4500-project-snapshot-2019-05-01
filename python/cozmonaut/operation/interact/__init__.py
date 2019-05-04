@@ -7,6 +7,7 @@ import asyncio
 import threading
 from enum import Enum
 
+import base
 import cozmo
 
 from cozmonaut.operation import AbstractOperation
@@ -61,6 +62,10 @@ class OperationInteract(AbstractOperation):
         # The live robot instances
         self._robot_a = None
         self._robot_b = None
+
+        # The monitor instances
+        self._monitor_a = None
+        self._monitor_b = None
 
     def start(self):
         # Clear the kill switch and cleanup state
@@ -391,6 +396,12 @@ class OperationInteract(AbstractOperation):
         :param robot: Cozmo A instance
         """
 
+        # Register with base (the C code)
+        base.add_robot(robot.robot_id)
+
+        # Get robot monitor
+        self._monitor_a = base.get_monitor(robot.robot_id)
+
         # Register to receive camera frames from this robot
         robot.camera.add_event_handler(cozmo.robot.camera.EvtNewRawCameraImage, self._cozmo_a_on_new_raw_camera_image)
 
@@ -400,12 +411,20 @@ class OperationInteract(AbstractOperation):
         # Schedule a face watcher for this robot onto the loop
         coro_face = asyncio.ensure_future(self._face_watcher(robot))
 
+        # Schedule watchers for sensor monitoring
+        coro_imu = asyncio.ensure_future(self._imu_watcher(robot))
+        coro_wheel_speeds = asyncio.ensure_future(self._wheel_speeds_watcher(robot))
+
         # Loop for Cozmo A
         while not self._stopping:
             # TODO: Swap back and forth between active and idle
 
             # Yield control to other coroutines
             await asyncio.sleep(0)
+
+        # Wait for sensor monitoring coroutines to stop
+        await coro_wheel_speeds
+        await coro_imu
 
         # Wait for face coroutine to stop
         await coro_face
@@ -432,6 +451,12 @@ class OperationInteract(AbstractOperation):
         :param robot: Cozmo B instance
         """
 
+        # Register with base (the C code)
+        base.add_robot(robot.robot_id)
+
+        # Get robot monitor
+        self._monitor_b = base.get_monitor(robot.robot_id)
+
         # Register to receive camera frames from this robot
         robot.camera.add_event_handler(cozmo.robot.camera.EvtNewRawCameraImage, self._cozmo_b_on_new_raw_camera_image)
 
@@ -441,12 +466,20 @@ class OperationInteract(AbstractOperation):
         # Schedule a face watcher for this robot onto the loop
         coro_face = asyncio.ensure_future(self._face_watcher(robot))
 
+        # Schedule watchers for sensor monitoring
+        coro_imu = asyncio.ensure_future(self._imu_watcher(robot))
+        coro_wheel_speeds = asyncio.ensure_future(self._wheel_speeds_watcher(robot))
+
         # Loop for Cozmo B
         while not self._stopping:
             # TODO: Swap back and forth between active and idle (but opposite that of Cozmo A)
 
             # Yield control to other coroutines
             await asyncio.sleep(0)
+
+        # Wait for sensor monitoring coroutines to stop
+        await coro_wheel_speeds
+        await coro_imu
 
         # Wait for face coroutine to stop
         await coro_face
@@ -499,14 +532,27 @@ class OperationInteract(AbstractOperation):
         :param robot: The robot instance
         """
 
+        # Get the robot monitor
+        monitor = None
+        if robot == self._robot_a:
+            monitor = self._monitor_a
+        elif robot == self._robot_b:
+            monitor = self._monitor_b
+
         while not self._stopping:
+            # Read the battery voltage
+            battery_voltage = robot.battery_voltage
+
+            # Push the reading
+            monitor.push_battery(battery_voltage)
+
             # If battery potential is below the recommended "low" level
-            if robot.battery_voltage < 3.5:
+            if battery_voltage < 3.5:
                 # TODO: Return to charger
                 break
 
-            # Yield control to other coroutines
-            await asyncio.sleep(0)
+            # Sleep for configured delay
+            await asyncio.sleep(monitor.delay_battery)
 
     async def _face_watcher(self, robot: cozmo.robot.Robot):
         """
@@ -532,9 +578,6 @@ class OperationInteract(AbstractOperation):
             track = await asyncio.wrap_future(ft.next_track())
 
             # TODO: Make Cozmo look at the face for social cue
-            #   Hopefully we don't lose the track b/c motion blur, but I think I know a hack if we do
-
-            await asyncio.sleep(0.25)  # TODO: Let motion blur settle down? Am I overestimating motion blur?
 
             # Request to recognize the face
             rec = await asyncio.wrap_future(ft.recognize(track.index))
@@ -547,12 +590,79 @@ class OperationInteract(AbstractOperation):
                 # Start with a new face
                 continue
 
-            # TODO: Greet the face if rec.fid is not negative one
-            #  If rec.fid is negative one, then meet the new person and store a Base64 copy of rec.ident to the DB
-            #  Don't forget to then add it to the trackers with tracker_a.add_identity and tracker_b.add_identity
+            # If the face is new
+            if rec.fid == -1:
+                # TODO: This face was never seen before
+                #  We need to ask for person's name, convert rec.ident to Base64, and store both in DB
+                pass
+            else:
+                # TODO: We have seen this face before
+                #  We need to take rec.fid and use it to query for the person's name, then we say_text
+                pass
 
             # Yield control to other coroutines
             await asyncio.sleep(0)
+
+    async def _imu_watcher(self, robot: cozmo.robot.Robot):
+        """
+        A watcher for Cozmo robot inertial motion unit (IMU) readings.
+
+        :param robot: The robot instance
+        """
+
+        # Get the robot monitor
+        monitor = None
+        if robot == self._robot_a:
+            monitor = self._monitor_a
+        elif robot == self._robot_b:
+            monitor = self._monitor_b
+
+        while not self._stopping:
+            # Take readings from accelerometer
+            # We convert from mm/s^2 to m/s^2
+            accel_x = robot.accelerometer.x / 100
+            accel_y = robot.accelerometer.y / 100
+            accel_z = robot.accelerometer.z / 100
+
+            # Push accelerometer readings
+            monitor.push_accelerometer(accel_x, accel_y, accel_z)
+
+            # Take readings from gyroscope
+            # We keep these in rad/s
+            gyro_x = robot.gyro.x
+            gyro_y = robot.gyro.y
+            gyro_z = robot.gyro.z
+
+            # Push gyroscope readings
+            monitor.push_gyroscope(gyro_x, gyro_y, gyro_z)
+
+            # Sleep for configured delay
+            await asyncio.sleep(monitor.delay_imu)
+
+    async def _wheel_speeds_watcher(self, robot: cozmo.robot.Robot):
+        """
+        A watcher for Cozmo robot wheel speeds.
+
+        :param robot: The robot instance
+        """
+
+        # Get the robot monitor
+        monitor = None
+        if robot == self._robot_a:
+            monitor = self._monitor_a
+        elif robot == self._robot_b:
+            monitor = self._monitor_b
+
+        while not self._stopping:
+            # Take readings
+            wheel_speed_left = robot.left_wheel_speed.speed_mmps
+            wheel_speed_right = robot.right_wheel_speed.speed_mmps
+
+            # Push the readings
+            monitor.push_wheel_speeds(wheel_speed_left, wheel_speed_right)
+
+            # Sleep for configured delay
+            await asyncio.sleep(monitor.delay_wheel_speeds)
 
 
 # Do not leave the charger until we say it's okay

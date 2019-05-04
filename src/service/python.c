@@ -11,8 +11,11 @@
 
 #include "python.h"
 
+#include "../khash.h"
 #include "../log.h"
 #include "../service.h"
+
+KHASH_MAP_INIT_INT(i2py, PyObject*)
 
 /** Driver code for exec stage of the friends list operation. */
 static const char DRIVER_CODE_OP_FRIENDS_LIST_EXEC[] =
@@ -56,6 +59,307 @@ static int python__op_selected;
 
 /** Python thread state. */
 static __thread PyThreadState* python__thread_state;
+
+//
+// base.Monitor class
+//
+// Part of base extension module.
+//
+
+/** An instance of the Monitor class. */
+typedef struct {
+  PyObject_HEAD
+
+  /** The ID of the associated robot. */
+  int robot_id;
+} MonitorObject;
+
+static int Monitor_init(MonitorObject* self, PyObject* args, PyObject* kwds) {
+  return 0;
+}
+
+static void Monitor_dealloc(MonitorObject* self) {
+  Py_TYPE(self)->tp_free(self);
+}
+
+static PyObject* Monitor_push_battery(MonitorObject* self, PyObject* args) {
+  // Unpack battery voltage (no reference)
+  double voltage;
+  if (!PyArg_ParseTuple(args, "d", &voltage)) {
+    // Forward exception
+    return NULL;
+  }
+
+  LOGI("Battery: {}", _d(voltage));
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+static PyObject* Monitor_push_accelerometer(MonitorObject* self, PyObject* args) {
+  // Unpack accelerometer reading (no reference)
+  double x, y, z;
+  if (!PyArg_ParseTuple(args, "ddd", &x, &y, &z)) {
+    // Forward exception
+    return NULL;
+  }
+
+  LOGI("Accelerometer: ({}, {}, {})", _d(x), _d(y), _d(z));
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+static PyObject* Monitor_push_gyroscope(MonitorObject* self, PyObject* args) {
+  // Unpack gyroscope reading (no reference)
+  double x, y, z;
+  if (!PyArg_ParseTuple(args, "ddd", &x, &y, &z)) {
+    // Forward exception
+    return NULL;
+  }
+
+  LOGI("Gyroscope: ({}, {}, {})", _d(x), _d(y), _d(z));
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+static PyObject* Monitor_push_wheel_speeds(MonitorObject* self, PyObject* args) {
+  // Unpack gyroscope reading (no reference)
+  double l, r;
+  if (!PyArg_ParseTuple(args, "dd", &l, &r)) {
+    // Forward exception
+    return NULL;
+  }
+
+  LOGI("Left wheel: {}", _d(l));
+  LOGI("Right wheel: {}", _d(r));
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+PyObject* Monitor_getter_delay_battery(MonitorObject* self, PyObject* args) {
+  // The delay in seconds (TODO: Make this configurable)
+  static const double delay = 3;
+
+  // Create float object for delay (new reference)
+  PyObject* delay_battery = PyFloat_FromDouble(delay);
+  if (!delay_battery) {
+    // Forward exception
+    return NULL;
+  }
+
+  return delay_battery;
+}
+
+PyObject* Monitor_getter_delay_imu(MonitorObject* self, PyObject* args) {
+  // The delay in seconds (TODO: Make this configurable)
+  static const double delay = 0.1;
+
+  // Create float object for delay (new reference)
+  PyObject* delay_imu = PyFloat_FromDouble(delay);
+  if (!delay_imu) {
+    // Forward exception
+    return NULL;
+  }
+
+  return delay_imu;
+}
+
+PyObject* Monitor_getter_delay_wheel_speeds(MonitorObject* self, PyObject* args) {
+  // The delay in seconds (TODO: Make this configurable)
+  static const double delay = 0.1;
+
+  // Create float object for delay (new reference)
+  PyObject* delay_wheel_speeds = PyFloat_FromDouble(delay);
+  if (!delay_wheel_speeds) {
+    // Forward exception
+    return NULL;
+  }
+
+  return delay_wheel_speeds;
+}
+
+/** Methods for base.Monitor class. */
+static PyMethodDef Monitor_methods[] = {
+  {
+    .ml_name = "push_battery",
+    .ml_meth = (PyCFunction) &Monitor_push_battery,
+    .ml_flags = METH_VARARGS,
+  },
+  {
+    .ml_name = "push_accelerometer",
+    .ml_meth = (PyCFunction) &Monitor_push_accelerometer,
+    .ml_flags = METH_VARARGS,
+  },
+  {
+    .ml_name = "push_gyroscope",
+    .ml_meth = (PyCFunction) &Monitor_push_gyroscope,
+    .ml_flags = METH_VARARGS,
+  },
+  {
+    .ml_name = "push_wheel_speeds",
+    .ml_meth = (PyCFunction) &Monitor_push_wheel_speeds,
+    .ml_flags = METH_VARARGS,
+  },
+  {
+  },
+};
+
+/** Getters and setters for base.Monitor class. */
+static PyGetSetDef Monitor_getset[] = {
+  {
+    .name = "delay_battery",
+    .get = (getter) &Monitor_getter_delay_battery,
+  },
+  {
+    .name = "delay_imu",
+    .get = (getter) &Monitor_getter_delay_imu,
+  },
+  {
+    .name = "delay_wheel_speeds",
+    .get = (getter) &Monitor_getter_delay_wheel_speeds,
+  },
+  {
+  },
+};
+
+/** The Monitor class. */
+static PyTypeObject MonitorType = {
+  PyVarObject_HEAD_INIT(NULL, 0)
+  .tp_name = "base.Module",
+  .tp_basicsize = sizeof(MonitorObject),
+  .tp_itemsize = 0,
+  .tp_dealloc = (destructor) &Monitor_dealloc,
+  .tp_flags = Py_TPFLAGS_DEFAULT,
+  .tp_methods = Monitor_methods,
+  .tp_getset = Monitor_getset,
+  .tp_init = (initproc) &Monitor_init,
+  .tp_new = &PyType_GenericNew,
+};
+
+//
+// base extension module
+//
+
+/** The monitor map. */
+static khash_t(i2py)* map_monitor;
+
+static PyObject* base_add_robot(PyObject* self, PyObject* args) {
+  // Unpack robot ID (no reference)
+  int robot_id;
+  if (!PyArg_ParseTuple(args, "i", &robot_id)) {
+    // Forward exception
+    return NULL;
+  }
+
+  // Create a new monitor object (new reference)
+  MonitorObject* monitor = (MonitorObject*) PyObject_CallObject((PyObject*) &MonitorType, NULL);
+  if (!monitor) {
+    // Forward exception
+    return NULL;
+  }
+
+  // References:
+  //  - monitor (keep on success)
+
+  khiter_t it;
+  int ret;
+
+  // Key this robot ID into the monitor map
+  it = kh_put(i2py, map_monitor, (khint64_t) robot_id, &ret);
+
+  // Store monitor object in monitor map
+  kh_val(map_monitor, robot_id) = (PyObject*) monitor;
+
+  // TODO: Clean up the maps
+
+  Py_INCREF(Py_None);
+  return Py_None;
+}
+
+static PyObject* base_get_monitor(PyObject* self, PyObject* args) {
+  // Unpack robot ID (no reference)
+  int robot_id;
+  if (!PyArg_ParseTuple(args, "i", &robot_id)) {
+    // Forward exception
+    return NULL;
+  }
+
+  // Look up monitor for robot
+  khiter_t it = kh_get(i2py, map_monitor, (khint64_t) robot_id);
+
+  // If no mapping exists, return none
+  if (it == kh_end(map_monitor)) {
+    Py_INCREF(Py_None);
+    return Py_None;
+  }
+
+  // Get mapped monitor
+  MonitorObject* monitor = (MonitorObject*) kh_val(map_monitor, it);
+
+  // Return monitor
+  Py_INCREF(monitor);
+  return (PyObject*) monitor;
+}
+
+/** Methods for base module. */
+static PyMethodDef base_methods[] = {
+  {
+    .ml_name = "add_robot",
+    .ml_meth = base_add_robot,
+    .ml_flags = METH_VARARGS,
+  },
+  {
+    .ml_name = "get_monitor",
+    .ml_meth = base_get_monitor,
+    .ml_flags = METH_VARARGS,
+  },
+  {
+  },
+};
+
+/** Definition for base module. */
+static PyModuleDef base_module = {
+  PyModuleDef_HEAD_INIT,
+  .m_name = "base",
+  .m_size = -1,
+  .m_methods = base_methods,
+};
+
+/** Initialize base module. */
+static PyMODINIT_FUNC PyInit_base() {
+  // Ensure Monitor type is ready
+  if (PyType_Ready(&MonitorType) < 0) {
+    // Forward exception
+    return NULL;
+  }
+
+  // Create module instance
+  PyObject* m = PyModule_Create(&base_module);
+
+  // References:
+  //  - m (keep on success)
+
+  // Add Monitor type object to base module (steals reference
+  Py_INCREF(&MonitorType);
+  if (PyModule_AddObject(m, "Monitor", (PyObject*) &MonitorType) < 0) {
+    // References:
+    //  - m (keep on success)
+
+    // Release references
+    Py_DECREF(m);
+
+    // Forward exception
+    return NULL;
+  }
+
+  // Initialize monitor map
+  map_monitor = kh_init(i2py);
+
+  return m;
+}
 
 //
 // cstdout extension module
@@ -1272,8 +1576,9 @@ static int python__proc_wasd_clr_right(const void* a, void* b) {
 static int on_load() {
   // Append extension modules to Python init table
   // This will let us import them from Python code
-  PyImport_AppendInittab("cstdout", PyInit_cstdout);
-  PyImport_AppendInittab("cstderr", PyInit_cstderr);
+  PyImport_AppendInittab("base", &PyInit_base);
+  PyImport_AppendInittab("cstdout", &PyInit_cstdout);
+  PyImport_AppendInittab("cstderr", &PyInit_cstderr);
 
   // Try to initialize Python interpreter
   Py_Initialize();

@@ -36,10 +36,6 @@ static GLFWwindow* monitor__window;
 /** The NanoVG context. */
 static NVGcontext* monitor__nvg_context;
 
-//
-// Rendering
-//
-
 /** Initialize rendering. */
 static void monitor__render_init() {
   LOGT("Render initialize");

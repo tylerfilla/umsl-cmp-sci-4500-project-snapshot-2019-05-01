@@ -402,7 +402,6 @@ class FaceTracker:
 
             # Get the image that corresponds to this tracker
             image = self._tracker_images[index]
-            print('image')
 
         print(f'Details gathered for tracker {index}; stand by for pose prediction...')
 

@@ -275,8 +275,6 @@ class FaceTracker:
             with self._detection_kill_lock:
                 # Test kill switch
                 if self._detection_kill:
-                    # Unlock it and die
-                    self._detection_kill_lock.release()
                     break
 
             with self._pending_detection_lock:

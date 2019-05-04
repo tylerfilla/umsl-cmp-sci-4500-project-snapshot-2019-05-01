@@ -7,7 +7,7 @@ import time
 from concurrent.futures import Future
 from concurrent.futures.thread import ThreadPoolExecutor
 from threading import Thread, Lock
-from typing import List, Tuple, Dict
+from typing import List, Tuple, Dict, Optional
 
 import PIL.Image
 import cv2
@@ -383,7 +383,7 @@ class FaceTracker:
             # Sleep for a bit
             time.sleep(0.5)
 
-    def _recognize_main(self, index: int) -> RecognizedFace:
+    def _recognize_main(self, index: int) -> Optional[RecognizedFace]:
         """
         Main function for recognizing a face.
 
@@ -393,11 +393,16 @@ class FaceTracker:
         print(f'A recognition worker has kicked off for tracker {index}')
 
         with self._trackers_lock:
+            if self._trackers.get(index) is None:
+                print(f'Tracker {index} no longer exists')
+                return None
+
             # Query the latest face bounding box from the tracker
             position: dlib.rectangle = self._trackers[index].get_position()
 
             # Get the image that corresponds to this tracker
             image = self._tracker_images[index]
+            print('image')
 
         print(f'Details gathered for tracker {index}; stand by for pose prediction...')
 

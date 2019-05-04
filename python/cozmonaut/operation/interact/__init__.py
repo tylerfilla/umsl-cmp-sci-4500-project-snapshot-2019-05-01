@@ -422,7 +422,8 @@ class OperationInteract(AbstractOperation):
         :param evt: The event instance
         """
 
-        # TODO: Send the image off to face tracker A
+        # Send image off to the face tracker
+        self._face_tracker_a.update(evt.image)
 
     async def _cozmo_b_main(self, robot: cozmo.robot.Robot):
         """
@@ -462,7 +463,8 @@ class OperationInteract(AbstractOperation):
         :param evt: The event instance
         """
 
-        # TODO: Send the image off to face tracker B
+        # Send image off to the face tracker
+        self._face_tracker_b.update(evt.image)
 
     async def _watchdog(self):
         """
@@ -536,6 +538,14 @@ class OperationInteract(AbstractOperation):
 
             # Request to recognize the face
             rec = await asyncio.wrap_future(ft.recognize(track.index))
+
+            # If the face turned away early, then we couldn't recognize it in time
+            if rec is None:
+                # Yield control to other coroutines
+                await asyncio.sleep(0)
+
+                # Start with a new face
+                continue
 
             # TODO: Greet the face if rec.fid is not negative one
             #  If rec.fid is negative one, then meet the new person and store a Base64 copy of rec.ident to the DB

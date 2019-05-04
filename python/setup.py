@@ -13,5 +13,9 @@ setup(
     packages=find_packages(),
     install_requires=[
         'cozmo',
+        'dlib',
+        'pillow',
+        'numpy',
+        'opencv-python',
     ],
 )

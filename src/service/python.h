@@ -8,14 +8,14 @@
 
 /** Client operations. */
 enum service_python_op {
-  /** Interactive mode. */
-    service_python_op_interact,
-
   /** Friends list mode. */
     service_python_op_friends_list,
 
   /** Friends remove mode. */
     service_python_op_friends_remove,
+
+  /** Interactive mode. */
+    service_python_op_interact,
 };
 
 /** Python service functions. */

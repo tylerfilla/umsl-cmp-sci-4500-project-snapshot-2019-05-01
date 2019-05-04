@@ -15,11 +15,13 @@
 #include "../service.h"
 #include "../log.h"
 
+/** The Python thread. */
 static pthread_t python__thread;
 
 /** Python thread main function. */
 static void* python__thread_main(void* arg) {
   LOGI("The Python thread has started");
+  return NULL;
 }
 
 //

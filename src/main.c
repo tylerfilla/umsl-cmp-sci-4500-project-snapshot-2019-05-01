@@ -30,7 +30,7 @@ int main(int argc, char* argv[]) {
   service_start(SERVICE_MONITOR);
 
   // Launch interactive mode
-  service_call(SERVICE_PYTHON, service_python_fn_op_exec, (const void*) service_python_op_friends_list, NULL);
+  service_call(SERVICE_PYTHON, service_python_fn_op_exec, (const void*) service_python_op_interact, NULL);
 
   // Open the monitor window
   service_call(SERVICE_MONITOR, service_monitor_fn_win_open, NULL, NULL);

@@ -16,6 +16,7 @@
 #include <nanovg/nanovg_gl.h>
 
 #include "monitor.h"
+#include "python.h"
 
 #include "../log.h"
 #include "../service.h"
@@ -117,7 +118,60 @@ static void monitor__window_cb_cursor_pos(GLFWwindow* window, double xpos, doubl
 }
 
 static void monitor__window_cb_key(GLFWwindow* window, int key, int scancode, int action, int mods) {
-  LOGT("monitor__window_cb_key({}, {}, {}, {}, {})", _ptr(window), _i(key), _i(scancode), _i(action), _i(mods));
+  switch (key) {
+    case GLFW_KEY_W:
+    case GLFW_KEY_UP:
+      switch (action) {
+        case GLFW_PRESS:
+          // Set forward state
+          service_call(SERVICE_PYTHON, service_python_fn_wasd_set_fwd, NULL, NULL);
+          break;
+        case GLFW_RELEASE:
+          // Clear forward state
+          service_call(SERVICE_PYTHON, service_python_fn_wasd_clr_fwd, NULL, NULL);
+          break;
+      }
+      break;
+    case GLFW_KEY_A:
+    case GLFW_KEY_LEFT:
+      switch (action) {
+        case GLFW_PRESS:
+          // Set left state
+          service_call(SERVICE_PYTHON, service_python_fn_wasd_set_left, NULL, NULL);
+          break;
+        case GLFW_RELEASE:
+          // Clear left state
+          service_call(SERVICE_PYTHON, service_python_fn_wasd_clr_left, NULL, NULL);
+          break;
+      }
+      break;
+    case GLFW_KEY_S:
+    case GLFW_KEY_DOWN:
+      switch (action) {
+        case GLFW_PRESS:
+          // Set reverse state
+          service_call(SERVICE_PYTHON, service_python_fn_wasd_set_rev, NULL, NULL);
+          break;
+        case GLFW_RELEASE:
+          // Clear reverse state
+          service_call(SERVICE_PYTHON, service_python_fn_wasd_clr_rev, NULL, NULL);
+          break;
+      }
+      break;
+    case GLFW_KEY_D:
+    case GLFW_KEY_RIGHT:
+      switch (action) {
+        case GLFW_PRESS:
+          // Set right state
+          service_call(SERVICE_PYTHON, service_python_fn_wasd_set_right, NULL, NULL);
+          break;
+        case GLFW_RELEASE:
+          // Clear right state
+          service_call(SERVICE_PYTHON, service_python_fn_wasd_clr_right, NULL, NULL);
+          break;
+      }
+      break;
+  }
 }
 
 static void monitor__window_cb_mouse_button(GLFWwindow* window, int button, int action, int mods) {

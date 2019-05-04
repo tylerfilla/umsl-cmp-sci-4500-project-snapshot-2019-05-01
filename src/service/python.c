@@ -52,8 +52,8 @@ static enum service_python_op python__op;
 /** Nonzero if an operation is selected. */
 static int python__op_selected;
 
-/** Python thread state for the service thread. */
-static PyThreadState* python__thread_state;
+/** Python thread state. */
+static __thread PyThreadState* python__thread_state;
 
 //
 // cstdout extension module
@@ -679,7 +679,9 @@ static void python__op_friends_list_stop() {
   PyObject* main = PyImport_AddModule("__main__");
   if (!main) {
     // Handle exception
-    return python__handle_exception();
+    python__handle_exception();
+
+    return;
   }
 
   // Get main module dictionary (borrowed reference)
@@ -766,7 +768,9 @@ static void python__op_friends_remove_stop() {
   PyObject* main = PyImport_AddModule("__main__");
   if (!main) {
     // Handle exception
-    return python__handle_exception();
+    python__handle_exception();
+
+    return;
   }
 
   // Get main module dictionary (borrowed reference)
@@ -853,7 +857,9 @@ static void python__op_interact_stop() {
   PyObject* main = PyImport_AddModule("__main__");
   if (!main) {
     // Handle exception
-    return python__handle_exception();
+    python__handle_exception();
+
+    return;
   }
 
   // Get main module dictionary (borrowed reference)
@@ -914,35 +920,347 @@ static int python__proc_op_exec(const void* a, void* b) {
 }
 
 static int python__proc_wasd_set_fwd(const void* a, void* b) {
-  return 1; // TODO
+  // Require interactive mode
+  if (!python__op_selected || python__op != service_python_op_interact) {
+    LOGE("WASD only supported in interactive mode");
+    return 1;
+  }
+
+  // Acquire GIL
+  PyGILState_STATE state = PyGILState_Ensure();
+
+  // Import the __main__ module (borrowed reference)
+  PyObject* main = PyImport_AddModule("__main__");
+  if (!main) {
+    // Handle exception
+    python__handle_exception();
+  }
+
+  // Get main module dictionary (borrowed reference)
+  PyObject* dict = PyModule_GetDict(main);
+  if (!dict) {
+    // Handle exception
+    python__handle_exception();
+
+    // Release GIL
+    PyGILState_Release(state);
+    return 1;
+  }
+
+  // Run the Python code
+  if (!PyRun_String("globals()['op'].on_wasd_set_fwd()", Py_single_input, dict, dict)) {
+    // Handle exception
+    python__handle_exception();
+
+    // Release GIL
+    PyGILState_Release(state);
+    return 1;
+  }
+
+  // Release GIL
+  PyGILState_Release(state);
+  return 0;
 }
 
 static int python__proc_wasd_clr_fwd(const void* a, void* b) {
-  return 1; // TODO
+  // Require interactive mode
+  if (!python__op_selected || python__op != service_python_op_interact) {
+    LOGE("WASD only supported in interactive mode");
+    return 1;
+  }
+
+  // Acquire GIL
+  PyGILState_STATE state = PyGILState_Ensure();
+
+  // Import the __main__ module (borrowed reference)
+  PyObject* main = PyImport_AddModule("__main__");
+  if (!main) {
+    // Handle exception
+    python__handle_exception();
+  }
+
+  // Get main module dictionary (borrowed reference)
+  PyObject* dict = PyModule_GetDict(main);
+  if (!dict) {
+    // Handle exception
+    python__handle_exception();
+
+    // Release GIL
+    PyGILState_Release(state);
+    return 1;
+  }
+
+  // Run the Python code
+  if (!PyRun_String("globals()['op'].on_wasd_clr_fwd()", Py_single_input, dict, dict)) {
+    // Handle exception
+    python__handle_exception();
+
+    // Release GIL
+    PyGILState_Release(state);
+    return 1;
+  }
+
+  // Release GIL
+  PyGILState_Release(state);
+  return 0;
 }
 
 static int python__proc_wasd_set_rev(const void* a, void* b) {
-  return 1; // TODO
+  // Require interactive mode
+  if (!python__op_selected || python__op != service_python_op_interact) {
+    LOGE("WASD only supported in interactive mode");
+    return 1;
+  }
+
+  // Acquire GIL
+  PyGILState_STATE state = PyGILState_Ensure();
+
+  // Import the __main__ module (borrowed reference)
+  PyObject* main = PyImport_AddModule("__main__");
+  if (!main) {
+    // Handle exception
+    python__handle_exception();
+  }
+
+  // Get main module dictionary (borrowed reference)
+  PyObject* dict = PyModule_GetDict(main);
+  if (!dict) {
+    // Handle exception
+    python__handle_exception();
+
+    // Release GIL
+    PyGILState_Release(state);
+    return 1;
+  }
+
+  // Run the Python code
+  if (!PyRun_String("globals()['op'].on_wasd_set_rev()", Py_single_input, dict, dict)) {
+    // Handle exception
+    python__handle_exception();
+
+    // Release GIL
+    PyGILState_Release(state);
+    return 1;
+  }
+
+  // Release GIL
+  PyGILState_Release(state);
+  return 0;
 }
 
 static int python__proc_wasd_clr_rev(const void* a, void* b) {
-  return 1; // TODO
+  // Require interactive mode
+  if (!python__op_selected || python__op != service_python_op_interact) {
+    LOGE("WASD only supported in interactive mode");
+    return 1;
+  }
+
+  // Acquire GIL
+  PyGILState_STATE state = PyGILState_Ensure();
+
+  // Import the __main__ module (borrowed reference)
+  PyObject* main = PyImport_AddModule("__main__");
+  if (!main) {
+    // Handle exception
+    python__handle_exception();
+  }
+
+  // Get main module dictionary (borrowed reference)
+  PyObject* dict = PyModule_GetDict(main);
+  if (!dict) {
+    // Handle exception
+    python__handle_exception();
+
+    // Release GIL
+    PyGILState_Release(state);
+    return 1;
+  }
+
+  // Run the Python code
+  if (!PyRun_String("globals()['op'].on_wasd_clr_rev()", Py_single_input, dict, dict)) {
+    // Handle exception
+    python__handle_exception();
+
+    // Release GIL
+    PyGILState_Release(state);
+    return 1;
+  }
+
+  // Release GIL
+  PyGILState_Release(state);
+  return 0;
 }
 
 static int python__proc_wasd_set_left(const void* a, void* b) {
-  return 1; // TODO
+  // Require interactive mode
+  if (!python__op_selected || python__op != service_python_op_interact) {
+    LOGE("WASD only supported in interactive mode");
+    return 1;
+  }
+
+  // Acquire GIL
+  PyGILState_STATE state = PyGILState_Ensure();
+
+  // Import the __main__ module (borrowed reference)
+  PyObject* main = PyImport_AddModule("__main__");
+  if (!main) {
+    // Handle exception
+    python__handle_exception();
+  }
+
+  // Get main module dictionary (borrowed reference)
+  PyObject* dict = PyModule_GetDict(main);
+  if (!dict) {
+    // Handle exception
+    python__handle_exception();
+
+    // Release GIL
+    PyGILState_Release(state);
+    return 1;
+  }
+
+  // Run the Python code
+  if (!PyRun_String("globals()['op'].on_wasd_set_left()", Py_single_input, dict, dict)) {
+    // Handle exception
+    python__handle_exception();
+
+    // Release GIL
+    PyGILState_Release(state);
+    return 1;
+  }
+
+  // Release GIL
+  PyGILState_Release(state);
+  return 0;
 }
 
 static int python__proc_wasd_clr_left(const void* a, void* b) {
-  return 1; // TODO
+  // Require interactive mode
+  if (!python__op_selected || python__op != service_python_op_interact) {
+    LOGE("WASD only supported in interactive mode");
+    return 1;
+  }
+
+  // Acquire GIL
+  PyGILState_STATE state = PyGILState_Ensure();
+
+  // Import the __main__ module (borrowed reference)
+  PyObject* main = PyImport_AddModule("__main__");
+  if (!main) {
+    // Handle exception
+    python__handle_exception();
+  }
+
+  // Get main module dictionary (borrowed reference)
+  PyObject* dict = PyModule_GetDict(main);
+  if (!dict) {
+    // Handle exception
+    python__handle_exception();
+
+    // Release GIL
+    PyGILState_Release(state);
+    return 1;
+  }
+
+  // Run the Python code
+  if (!PyRun_String("globals()['op'].on_wasd_clr_left()", Py_single_input, dict, dict)) {
+    // Handle exception
+    python__handle_exception();
+
+    // Release GIL
+    PyGILState_Release(state);
+    return 1;
+  }
+
+  // Release GIL
+  PyGILState_Release(state);
+  return 0;
 }
 
 static int python__proc_wasd_set_right(const void* a, void* b) {
-  return 1; // TODO
+  // Require interactive mode
+  if (!python__op_selected || python__op != service_python_op_interact) {
+    LOGE("WASD only supported in interactive mode");
+    return 1;
+  }
+
+  // Acquire GIL
+  PyGILState_STATE state = PyGILState_Ensure();
+
+  // Import the __main__ module (borrowed reference)
+  PyObject* main = PyImport_AddModule("__main__");
+  if (!main) {
+    // Handle exception
+    python__handle_exception();
+  }
+
+  // Get main module dictionary (borrowed reference)
+  PyObject* dict = PyModule_GetDict(main);
+  if (!dict) {
+    // Handle exception
+    python__handle_exception();
+
+    // Release GIL
+    PyGILState_Release(state);
+    return 1;
+  }
+
+  // Run the Python code
+  if (!PyRun_String("globals()['op'].on_wasd_set_right()", Py_single_input, dict, dict)) {
+    // Handle exception
+    python__handle_exception();
+
+    // Release GIL
+    PyGILState_Release(state);
+    return 1;
+  }
+
+  // Release GIL
+  PyGILState_Release(state);
+  return 0;
 }
 
 static int python__proc_wasd_clr_right(const void* a, void* b) {
-  return 1; // TODO
+  // Require interactive mode
+  if (!python__op_selected || python__op != service_python_op_interact) {
+    LOGE("WASD only supported in interactive mode");
+    return 1;
+  }
+
+  // Acquire GIL
+  PyGILState_STATE state = PyGILState_Ensure();
+
+  // Import the __main__ module (borrowed reference)
+  PyObject* main = PyImport_AddModule("__main__");
+  if (!main) {
+    // Handle exception
+    python__handle_exception();
+  }
+
+  // Get main module dictionary (borrowed reference)
+  PyObject* dict = PyModule_GetDict(main);
+  if (!dict) {
+    // Handle exception
+    python__handle_exception();
+
+    // Release GIL
+    PyGILState_Release(state);
+    return 1;
+  }
+
+  // Run the Python code
+  if (!PyRun_String("globals()['op'].on_wasd_clr_right()", Py_single_input, dict, dict)) {
+    // Handle exception
+    python__handle_exception();
+
+    // Release GIL
+    PyGILState_Release(state);
+    return 1;
+  }
+
+  // Release GIL
+  PyGILState_Release(state);
+  return 0;
 }
 
 //

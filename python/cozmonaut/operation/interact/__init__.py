@@ -36,10 +36,10 @@ class OperationInteract(AbstractOperation):
 
     def __init__(self, args: dict):
         # Grab mode from args while defaulting to mode 'both'
-        self._mode: OperationInteractMode = OperationInteractMode[args.get('mode', 'both')]
+        self._mode: OperationInteractMode = OperationInteractMode[args.get('mode', 'only_a')]
 
         # Grab A and B serial numbers from args
-        self._serial_a: str = args.get('serial_a', '')
+        self._serial_a: str = args.get('serial_a', '45a18821')
         self._serial_b: str = args.get('serial_b', '')
 
         # Kill switch for the interact loop

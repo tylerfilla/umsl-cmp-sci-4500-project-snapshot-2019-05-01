@@ -3,7 +3,10 @@
  * Copyright 2019 The Cozmonaut Contributors
  */
 
+#define LOG_TAG "python"
+
 #include <stddef.h>
+#include <pthread.h>
 
 #include <Python.h>
 
@@ -12,13 +15,27 @@
 #include "../service.h"
 #include "../log.h"
 
+static pthread_t python__thread;
+
+/** Python thread main function. */
+static void* python__thread_main(void* arg) {
+  LOGI("The Python thread has started");
+}
+
 //
 // Service Procedures
 //
 
 static int python__proc_op_exec(const void* a, void* b) {
   enum service_python_op op = (enum service_python_op) a;
-  return 1; // TODO
+
+  // Try to spawn the Python thread
+  if (pthread_create(&python__thread, NULL, &python__thread_main, (void*) op)) {
+    LOGE("Failed to spawn the Python thread");
+    return 1;
+  }
+
+  return 0;
 }
 
 static int python__proc_wasd_set_fwd(const void* a, void* b) {
@@ -89,6 +106,13 @@ static int on_start() {
 }
 
 static int on_stop() {
+  // Try to join the Python thread
+  // This waits for it to die of natural causes
+  // It is not an error if this call fails, but resources may leak
+  if (pthread_join(python__thread, NULL)) {
+    LOGW("Failed to join the Python thread");
+  }
+
   return 0;
 }
 

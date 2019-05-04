@@ -3,11 +3,17 @@
  * Copyright 2019 The Cozmonaut Contributors
  */
 
+#define LOG_TAG "monitor"
+
 #include <stddef.h>
 #include <stdlib.h>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+#define NANOVG_GL3_IMPLEMENTATION
+#include <nanovg/nanovg.h>
+#include <nanovg/nanovg_gl.h>
 
 #include "monitor.h"
 
@@ -25,6 +31,82 @@
 
 /** The current monitor window. */
 static GLFWwindow* monitor__window;
+
+/** The NanoVG context. */
+static NVGcontext* monitor__nvg_context;
+
+//
+// Rendering
+//
+
+/** Initialize rendering. */
+static void monitor__render_init() {
+  LOGT("Render initialize");
+
+  // Try to create an antialiased NanoVG context
+  if (!(monitor__nvg_context = nvgCreateGL3(NVG_ANTIALIAS | NVG_STENCIL_STROKES))) {
+    LOGE("Failed to create NanoVG context");
+    return;
+  }
+}
+
+/** Terminate rendering. */
+static void monitor__render_terminate() {
+  LOGT("Render terminate");
+
+  // Delete the NanoVG context
+  nvgDeleteGL3(monitor__nvg_context);
+  monitor__nvg_context = NULL;
+}
+
+/** Render a frame. */
+static void monitor__render_frame() {
+  // Get the latest window dimensions
+  int win_width;
+  int win_height;
+  glfwGetWindowSize(monitor__window, &win_width, &win_height);
+
+  // Get the latest framebuffer dimensions
+  int fb_width;
+  int fb_height;
+  glfwGetFramebufferSize(monitor__window, &fb_width, &fb_height);
+
+  // Compute latest device pixel ratio
+  // This can change frame-to-frame if you move the window across monitors
+  float dpr = fb_width / (float) win_width;
+
+  // Define an idiomatic viewport in terms of the framebuffer dimensions
+  glViewport(0, 0, fb_width, fb_height);
+
+  // Clear frame to white
+  glClearColor(1, 1, 1, 1);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+
+  // Begin NanoVG frame
+  nvgBeginFrame(monitor__nvg_context, win_width, win_height, dpr);
+
+  // FIXME: Do something useful
+  {
+    nvgShapeAntiAlias(monitor__nvg_context, 0);
+
+    nvgBeginPath(monitor__nvg_context);
+    nvgRect(monitor__nvg_context, 200, 200, 100, 100);
+    nvgStrokeColor(monitor__nvg_context, nvgRGBA(0, 0, 0, 255));
+    nvgStrokeWidth(monitor__nvg_context, 1);
+    nvgStroke(monitor__nvg_context);
+
+    nvgShapeAntiAlias(monitor__nvg_context, 1);
+
+    nvgBeginPath(monitor__nvg_context);
+    nvgRect(monitor__nvg_context, 350, 200, 100, 100);
+    nvgStrokeColor(monitor__nvg_context, nvgRGBA(0, 0, 0, 255));
+    nvgStrokeWidth(monitor__nvg_context, 1);
+    nvgStroke(monitor__nvg_context);
+  }
+
+  // End NanoVG frame
+  nvgEndFrame(monitor__nvg_context);
+}
 
 //
 // Window Callbacks
@@ -84,11 +166,15 @@ static int monitor__proc_win_open(const void* a, void* b) {
   // Wait for 1 v-sync when swapping buffers
   glfwSwapInterval(1);
 
+  // Try to load OpenGL function pointers
   int code;
   if (!(code = gladLoadGL())) {
     LOGE("Failed to load OpenGL: {}", _i(code));
     return 1;
   }
+
+  // Initialize rendering
+  monitor__render_init();
 
   return 0;
 }
@@ -98,6 +184,9 @@ static int monitor__proc_win_close(const void* a, void* b) {
     LOGE("Monitor window not yet open");
     return 1;
   }
+
+  // Terminate rendering
+  monitor__render_terminate();
 
   // Tear down the window
   glfwDestroyWindow(monitor__window);
@@ -112,8 +201,8 @@ static int monitor__proc_win_update(const void* a, void* b) {
     return 1;
   }
 
-  glClearColor(rand() / (float) RAND_MAX, rand() / (float) RAND_MAX, rand() / (float) RAND_MAX, 1);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);
+  // Render a frame
+  monitor__render_frame();
 
   // Swap buffers on monitor window
   glfwSwapBuffers(monitor__window);

@@ -13,8 +13,11 @@ class OperationFriendsRemove(AbstractOperation):
     In this mode, we remove friends as requested.
     """
 
+    def __init__(self, args: dict):
+        print('friends remove init')
+
     def start(self):
-        pass
+        print('friends remove start')
 
     def stop(self):
-        pass
+        print('friends remove stop')

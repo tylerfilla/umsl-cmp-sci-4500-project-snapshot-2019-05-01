@@ -13,8 +13,11 @@ class OperationFriendsList(AbstractOperation):
     In this mode, we list details about friends as requested.
     """
 
+    def __init__(self, args: dict):
+        print('friends list init')
+
     def start(self):
-        pass
+        print('friends list start')
 
     def stop(self):
-        pass
+        print('friends list stop')

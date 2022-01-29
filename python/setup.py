@@ -17,5 +17,6 @@ setup(
         'pillow',
         'numpy',
         'opencv-python',
+        'SpeechRecognition',
     ],
 )

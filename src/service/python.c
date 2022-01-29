@@ -90,7 +90,7 @@ static PyObject* Monitor_push_battery(MonitorObject* self, PyObject* args) {
     return NULL;
   }
 
-  LOGI("Battery: {}", _d(voltage));
+//LOGI("Battery: {}", _d(voltage));
 
   Py_INCREF(Py_None);
   return Py_None;
@@ -104,7 +104,7 @@ static PyObject* Monitor_push_accelerometer(MonitorObject* self, PyObject* args)
     return NULL;
   }
 
-  LOGI("Accelerometer: ({}, {}, {})", _d(x), _d(y), _d(z));
+//LOGI("Accelerometer: ({}, {}, {})", _d(x), _d(y), _d(z));
 
   Py_INCREF(Py_None);
   return Py_None;
@@ -118,7 +118,7 @@ static PyObject* Monitor_push_gyroscope(MonitorObject* self, PyObject* args) {
     return NULL;
   }
 
-  LOGI("Gyroscope: ({}, {}, {})", _d(x), _d(y), _d(z));
+//LOGI("Gyroscope: ({}, {}, {})", _d(x), _d(y), _d(z));
 
   Py_INCREF(Py_None);
   return Py_None;
@@ -132,8 +132,8 @@ static PyObject* Monitor_push_wheel_speeds(MonitorObject* self, PyObject* args) 
     return NULL;
   }
 
-  LOGI("Left wheel: {}", _d(l));
-  LOGI("Right wheel: {}", _d(r));
+//LOGI("Left wheel: {}", _d(l));
+//LOGI("Right wheel: {}", _d(r));
 
   Py_INCREF(Py_None);
   return Py_None;

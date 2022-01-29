@@ -6,9 +6,11 @@
 import asyncio
 import threading
 from enum import Enum
+from pprint import pprint
 
 import base
 import cozmo
+import speech_recognition
 
 from cozmonaut.operation import AbstractOperation
 from cozmonaut.operation.interact.face_tracker import FaceTracker
@@ -37,11 +39,11 @@ class OperationInteract(AbstractOperation):
 
     def __init__(self, args: dict):
         # Grab mode from args while defaulting to mode 'both'
-        self._mode: OperationInteractMode = OperationInteractMode[args.get('mode', 'only_a')]
+        self._mode: OperationInteractMode = OperationInteractMode[args.get('mode', 'both')]
 
         # Grab A and B serial numbers from args
         self._serial_a: str = args.get('serial_a', '45a18821')
-        self._serial_b: str = args.get('serial_b', '')
+        self._serial_b: str = args.get('serial_b', '0241c714')
 
         # Kill switch for the interact loop
         # When set, we are about to begin the cleanup process
@@ -164,6 +166,11 @@ class OperationInteract(AbstractOperation):
         print(f'Want Cozmo A to have serial number {self._serial_a or "(unknown)"}')
         print(f'Want Cozmo B to have serial number {self._serial_b or "(unknown)"}')
 
+        # Connect two Cozmos
+        conn1 = cozmo.connect_on_loop(loop)
+        conn2 = cozmo.connect_on_loop(loop)
+
+        """
         while True:
             # Connect to next available Cozmo
             try:
@@ -187,6 +194,14 @@ class OperationInteract(AbstractOperation):
             if self._robot_a is not None and self._robot_b is not None:
                 print('Both Cozmo A and Cozmo B assigned')
                 break
+        """
+
+        # TODO: Do the swap
+        self._robot_a = loop.run_until_complete(conn1.wait_for_robot())
+        self._robot_b = loop.run_until_complete(conn2.wait_for_robot())
+
+        print(f'{self._robot_a == self._robot_b}')
+        print(f'{self._robot_a.serial == self._robot_b.serial}')
 
         # A list for main function coroutines
         # Coroutine objects for both the _cozmo_a_main and _cozmo_b_main async functions can go here
@@ -380,7 +395,8 @@ class OperationInteract(AbstractOperation):
         )
 
         # FIXME: Remove this
-        self._face_tracker_a.add_identity(42, tyler_face)
+        # self._face_tracker_a.add_identity(42, tyler_face)
+        # self._face_tracker_b.add_identity(42, tyler_face)
 
         # Run the loop on this thread until it stops itself
         loop.run_forever()
@@ -388,6 +404,12 @@ class OperationInteract(AbstractOperation):
         # Stop the face trackers
         self._face_tracker_a.stop()
         self._face_tracker_b.stop()
+
+    async def _conn1_main(self):
+        pass
+
+    async def _conn2_main(self):
+        pass
 
     async def _cozmo_a_main(self, robot: cozmo.robot.Robot):
         """
@@ -573,35 +595,64 @@ class OperationInteract(AbstractOperation):
         elif robot == self._robot_b:
             ft = self._face_tracker_b
 
-        while not self._stopping:
-            # Wait for the next face tracked by the tracker
-            track = await asyncio.wrap_future(ft.next_track())
+        mics = speech_recognition.Microphone.list_microphone_names()
 
-            # TODO: Make Cozmo look at the face for social cue
+        pprint(mics)
 
-            # Request to recognize the face
-            rec = await asyncio.wrap_future(ft.recognize(track.index))
+        # Start the speech recognition
+        speech = speech_recognition.Recognizer()
 
-            # If the face turned away early, then we couldn't recognize it in time
-            if rec is None:
+        # Open the microphone
+        with speech_recognition.Microphone() as source:
+            while not self._stopping:
+                # Wait for the next face tracked by the tracker
+                track = await asyncio.wrap_future(ft.next_track())
+
+                # TODO: Make Cozmo look at the face for social cue
+
+                # Request to recognize the face
+                rec = await asyncio.wrap_future(ft.recognize(track.index))
+
+                # If the face turned away early, then we couldn't recognize it in time
+                if rec is None:
+                    # Yield control to other coroutines
+                    await asyncio.sleep(0)
+
+                    # Start with a new face
+                    continue
+
+                # If the face is new
+                if rec.fid == -1:
+                    # Say some stuff
+                    await robot.say_text(f'please say your name').wait_for_completed()
+
+                    print('START TALKING')
+
+                    # Capture an utterance
+                    utterance = speech.listen(source, timeout=1, phrase_time_limit=10)
+
+                    print('STOP TALKING')
+
+                    # Yield control to other coroutines
+                    await asyncio.sleep(0)
+
+                    # Recognize the spoken phrase
+                    text = speech.recognize_sphinx(utterance)
+
+                    # Yield control to other coroutines
+                    await asyncio.sleep(0)
+
+                    print(text)
+
+                    # TODO: This face was never seen before
+                    #  We need to ask for person's name, convert rec.ident to Base64, and store both in DB
+                else:
+                    # TODO: We have seen this face before
+                    #  We need to take rec.fid and use it to query for the person's name, then we say_text
+                    pass
+
                 # Yield control to other coroutines
                 await asyncio.sleep(0)
-
-                # Start with a new face
-                continue
-
-            # If the face is new
-            if rec.fid == -1:
-                # TODO: This face was never seen before
-                #  We need to ask for person's name, convert rec.ident to Base64, and store both in DB
-                pass
-            else:
-                # TODO: We have seen this face before
-                #  We need to take rec.fid and use it to query for the person's name, then we say_text
-                pass
-
-            # Yield control to other coroutines
-            await asyncio.sleep(0)
 
     async def _imu_watcher(self, robot: cozmo.robot.Robot):
         """

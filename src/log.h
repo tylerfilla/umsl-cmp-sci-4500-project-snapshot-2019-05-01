@@ -6,6 +6,73 @@
 #ifndef LOG_H
 #define LOG_H
 
+#include "service.h"
+
+/** The maximum size (in bytes) of a log record. */
+#define LOG_MAX_RECORD 512
+
+/**
+ * Submit a request to log. Formatting will be done on a background thread, and
+ * the final formatted record will meander into the log ring after some time.
+ *
+ * Ordinal: 0
+ *
+ * Arguments:
+ *   - arg1 (const struct log_request*) The log request
+ *   - arg2 Not used
+ *
+ * Returns:
+ *   - Zero on success, otherwise nonzero
+ */
+#define LOG_FN_SUBMIT 0
+
+/**
+ * Read up to one record from the log ring. The record is discarded even if it
+ * could not be read in full, so it is advisable to be prepared to receive
+ * MAX_LOG_RECORD bytes.
+ *
+ * Ordinal: 1
+ *
+ * Arguments:
+ *   - arg1 (size_t) The destination buffer length
+ *   - arg2 (char*) The destination buffer
+ *
+ * Returns
+ *   - The number of bytes actually read
+ */
+#define LOG_FN_RING_READ 1
+
+/**
+ * Query the allocated capacity of the log ring.
+ *
+ * Ordinal: 2
+ *
+ * Arguments:
+ *   - arg1 Not used
+ *   - arg2 (size_t*) [out] Destination for the capacity
+ *
+ * Returns:
+ *   - Not used
+ */
+#define LOG_FN_RING_CAPACITY 2
+
+/**
+ * Query the occupied size of the log ring.
+ *
+ * Ordinal: 3
+ *
+ * Arguments:
+ *   - arg1 Not used
+ *   - arg2 (size_t*) [out] Destination for the size
+ *
+ * Returns:
+ *   - Not used
+ */
+#define LOG_FN_RING_SIZE 3
+
+/** The log service. */
+extern struct service* const LOG_SERVICE;
+
 /** A log record severity level. */
 enum log_level {
   log_level_fatal,
@@ -14,27 +81,6 @@ enum log_level {
   log_level_info,
   log_level_debug,
   log_level_trace,
-};
-
-/** A form to fill out for submitting a log record. */
-struct log_form {
-  /** The log level. */
-  enum log_level level;
-
-  /** The message format string. */
-  const char* msg_fmt;
-
-  /** The message format arguments. */
-  const struct log_msg_fmt_arg* msg_fmt_args;
-
-  /** The number of message format arguments. */
-  unsigned int msg_fmt_args_num;
-
-  /** The file name. */
-  const char* file;
-
-  /** The line number. */
-  unsigned int line;
 };
 
 /** The type of a log message format argument. */
@@ -86,39 +132,53 @@ struct log_msg_fmt_arg {
   union log_msg_fmt_arg_value value;
 };
 
-/**
- * Submit a filled-out log form.
- *
- * @param form The log form
- */
-void log__submit_form(struct log_form* form);
+/** A form to fill out for submitting a log record. */
+struct log_request {
+  /** The log level. */
+  enum log_level level;
+
+  /** The message format string. */
+  const char* msg_fmt;
+
+  /** The message format arguments. */
+  const struct log_msg_fmt_arg* msg_fmt_args;
+
+  /** The number of message format arguments. */
+  unsigned int msg_fmt_args_num;
+
+  /** The file name. */
+  const char* file;
+
+  /** The line number. */
+  unsigned int line;
+};
 
 /** @private */
-#define LOG__FORM_MSG_ARGS(fmt, ...) \
+#define LOG__REQUEST_MSG_ARGS(fmt, ...) \
     ((const struct log_msg_fmt_arg[]) { __VA_ARGS__ })
 
 /** @private */
-#define LOG__FORM_MSG_ARGS_NUM(fmt, ...)                      \
+#define LOG__REQUEST_MSG_ARGS_NUM(fmt, ...)                      \
     (sizeof((const struct log_msg_fmt_arg[]) { __VA_ARGS__ }) \
       / sizeof(const struct log_msg_fmt_arg))
 
 /**
- * Form a log record.
+ * Prepare a log request.
  *
  * @param lvl The log level
  * @param fmt The log message format string
  * @param ... The log message format arguments
  */
-#define LOG_PREPARE(lvl, fmt, ...)                                  \
-    (struct log_form) {                                             \
-      .level = (enum log_level) (lvl),                              \
-      .msg_fmt = (const char*) (fmt),                               \
-      .msg_fmt_args =                                               \
-        LOG__FORM_MSG_ARGS((const char*) (fmt), ##__VA_ARGS__),     \
-      .msg_fmt_args_num =                                           \
-        LOG__FORM_MSG_ARGS_NUM((const char*) (fmt), ##__VA_ARGS__), \
-      .file = __FILE__,                                             \
-      .line = __LINE__,                                             \
+#define LOG_PREPARE(lvl, fmt, ...)                                      \
+    (struct log_request) {                                              \
+      .level = (enum log_level) (lvl),                                  \
+      .msg_fmt = (const char*) (fmt),                                   \
+      .msg_fmt_args =                                                   \
+        LOG__REQUEST_MSG_ARGS((const char*) (fmt), ##__VA_ARGS__),      \
+      .msg_fmt_args_num =                                               \
+        LOG__REQUEST_MSG_ARGS_NUM((const char*) (fmt), ##__VA_ARGS__),  \
+      .file = __FILE__,                                                 \
+      .line = __LINE__,                                                 \
     }
 
 /**
@@ -128,8 +188,9 @@ void log__submit_form(struct log_form* form);
  * @param fmt The log message format string
  * @param ... The log message format arguments
  */
-#define LOG(lvl, fmt, ...) \
-    log__submit_form(&LOG_PREPARE((lvl), (fmt), ##__VA_ARGS__))
+#define LOG(lvl, fmt, ...)                              \
+    service_call(LOG_SERVICE, LOG_FN_RING_PUSH,          \
+      &LOG_PREPARE((lvl), (fmt), ##__VA_ARGS__), NULL)  \
 
 /**
  * Submit a log record with level FATAL.
